@@ -1,3 +1,0 @@
-"0","# points(x=est_secant, y=g(est_secant))"
-"0",""
-"0","plot(x=x, y=dg(x), type = ""l"", col = ""blue"",lwd = 5)"

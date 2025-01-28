@@ -2,13 +2,22 @@
 title: "Lab1"
 author: "Cui Qingxuan"
 date: "`r Sys.Date()`"
-output: pdf_document
+output:
+  pdf_document:
+    toc: true
 ---
 
+# Collaborations:
 
-```{r}
+Cui Qingxuan: Responsible for the question 1.
+
+Nisal Amashan:
+
+# Question 1
+
+```{r, include=FALSE}
 g = function(x){
-  gx = log(x + 1) / x ^ 1.5 + 1
+  gx = log(x + 1) / (x ^ 1.5 + 1)
   return(gx)
 }
 
@@ -17,7 +26,7 @@ dg = function(x){
   ux = log(x+1)
   dvx = 1.5 * sqrt(x)
   vx = x ^ 1.5 + 1
-  dg = (dux*vx - dvx*ux) / (vx) ^ 2
+  dg = (dux*vx - dvx*ux) / (vx ^ 2)
   return(dg)
 }
 
@@ -25,42 +34,61 @@ estimate_d2g = function(xt, xt_1){
   return((dg(xt) - dg(xt_1)) / (xt - xt_1))
 }
 
-bisection = function(a = 0.8, intervals, threshold) {
-  est_list = vector("list", length(intervals))
-  for (i in seq_along(intervals)) {
-    b = a + intervals[i]
-    mid = (a + b) / 2
-    while (abs(a - b) > threshold) {
-      xt = (a + b) / 2
-      dgxt = dg(xt)
-      dga = dg(a)
-      dgb = dg(b)
+
+bisection = function(a, b, threshold = 0.001) {
+  est_list = vector("list", length(a))
+  
+  for (i in seq_along(a)) {
+    left = a[i]
+    right = b[i]
+    
+    while (abs(left - right) > threshold) {
+      mid = (left + right) / 2 
+      dg_mid = dg(mid)  
+      dg_left = dg(left)  
+      dg_right = dg(right) 
       
-      if (dga * dgxt <= 0) {
-        b = xt
-      } else if (dgb * dgxt < 0) {
-        a = xt
+      
+      if (dg_left * dg_mid <= 0) {
+        right = mid  
+      } else if (dg_right * dg_mid < 0) {
+        left = mid  
+      }
+      else{
+        cat("The maximum is out of [",left,",",right,"].\n")
+        break
       }
       
-      if (abs(a - b) <= threshold) break
+      
+      if (abs(left - right) <= threshold) break
     }
-    est_list[[i]] = (a + b) / 2
-    
+
+    est_list[[i]] = (left + right) / 2
   }
-  return(unlist(est_list))
+  
+  return(unlist(est_list)) 
 }
 
+
 secant = function(start, threshold) {
+
   xt1_list = vector("list", length(start))
   for (x0 in start) {
     xt = x0
-    xt_1 = x0 - threshold
+    xt_1 = x0 - 0.1
     while (TRUE) {
-      if(xt < 0){
-        print("second order derivatives is less than 0")
+      d2g = tryCatch({
+        estimate_d2g(xt, xt_1)
+      }, warning = function(w) {
+          cat("When xt =",xt,"xt-1 =",xt_1,", the second order derivative is Nan.\n")
+          return(1) 
+        })
+      if(d2g == 1){
+        xt = 0
         break
       }
-      xt1 = xt - dg(xt) / estimate_d2g(xt, xt_1)
+      xt1 = xt - dg(xt) / d2g
+  
       if (abs(xt1 - xt) < threshold) {
         break
       }
@@ -72,24 +100,61 @@ secant = function(start, threshold) {
   return(unlist(xt1_list))
 }
 
-
 ```
 
-```{r}
+## Plot the function and guess maximum
+
+```{r, echo=FALSE}
 x = seq(from = 0, to = 4, by = 0.01)
 gx = g(x)
-plot(x=x, y=gx, type="l", col = "red",lwd = 5)
+plot(x=x, y=gx, type="l", col = "red",lwd = 5, ylab = "g(x)")
 # points(x=est_secant, y=g(est_secant))
+```
 
+I guess the maximum point would be 0.9 approximately.
+
+## Plot g'(x)
+
+```{r, echo=FALSE}
 plot(x=x, y=dg(x), type = "l", col = "blue",lwd = 5)
 abline(a = 0, b = 0, lwd = 3, lty = 3) 
 # points(x=est_secant, y=dg(est_secant))
 ```
 
-```{r}
-intervals = seq(from = 0.2, to = 2, by = 0.1)
-start = seq(from = 0.2, to = 1.3, by = 0.01)
-est_bisection = bisection(intervals = intervals, threshold = 0.01)
-est_secant = secant(start = start, threshold = 0.01)
+## Implement bisection method based on user input
+
+```{r, echo=FALSE}
+a = 0.8
+b = 1.0
+threshold = 0.001
+cat("User input: \n a: ", a, "\n b: ",b, "\n Criterion: ", threshold)
+b_op = bisection(a, b, threshold)
+cat("\nThe estimated maximum point using bisection method is:", round(b_op,5))
 ```
 
+## Implement secant method based on user input
+
+```{r, echo=FALSE}
+start = 0.8
+cat("User input: \n start: ", start, "\n Criterion: ", threshold)
+s_op = secant(start, threshold)
+cat("\nThe estimated maximum point using secant method is:", round(s_op,5))
+```
+## Run the functions for different starting intervals/pairs of starting values 
+```{r, echo=FALSE}
+a_vec = seq(from = 0.5, to = 1.0, by = 0.1)
+b_vec = seq(from = 0.9, to = 1.4, by = 0.1)
+start_vec = seq(from = 0.5, to = 2, by = 0.1)
+cat("Bisection Method \n")
+bisection(a = a_vec, b = b_vec, threshold = threshold)
+cat("Secant Method \n")
+secant(start = start_vec, threshold = threshold)
+```
+
+# Question 2
+
+# Appendix
+
+```{r}
+# Question 1
+```

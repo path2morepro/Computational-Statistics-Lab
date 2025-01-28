@@ -1,3 +1,0 @@
-"0","x = seq(from = 0, to = 4, by = 0.01)"
-"0","gx = g(x)"
-"0","plot(x=x, y=gx, type=""l"", col = ""red"",lwd = 5)"
