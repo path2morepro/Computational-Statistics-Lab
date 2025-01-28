@@ -1,6 +1,6 @@
 ---
 title: "Lab1"
-author: "Cui Qingxuan"
+author: "Cui Qingxuan, Nisal Amashan"
 date: "`r Sys.Date()`"
 output:
   pdf_document:
@@ -11,11 +11,295 @@ output:
 
 Cui Qingxuan: Responsible for the question 1.
 
-Nisal Amashan:
+Nisal Amashan: Responsible for the question 2.
+
 
 # Question 1
 
 ```{r, include=FALSE}
+g = function(x){
+  gx = log(x + 1) / (x ^ 1.5 + 1)
+  return(gx)
+}
+
+dg = function(x){
+  dux = 1 / (x+1)
+  ux = log(x+1)
+  dvx = 1.5 * sqrt(x)
+  vx = x ^ 1.5 + 1
+  dg = (dux*vx - dvx*ux) / (vx ^ 2)
+  return(dg)
+}
+
+estimate_d2g = function(xt, xt_1){
+  return((dg(xt) - dg(xt_1)) / (xt - xt_1))
+}
+
+bisection = function(a, b, threshold = 0.001) {
+  est_list = vector("list", length(a))
+  
+  for (i in seq_along(a)) {
+    left = a[i]
+    right = b[i]
+    
+    while (abs(left - right) > threshold) {
+      mid = (left + right) / 2 
+      dg_mid = dg(mid)  
+      dg_left = dg(left)  
+      dg_right = dg(right) 
+      
+      
+      if (dg_left * dg_mid <= 0) {
+        right = mid  
+      } else if (dg_right * dg_mid < 0) {
+        left = mid  
+      }
+      else{
+        answer = 'Not Found'
+        break
+      }
+      
+      
+      if (abs(left - right) <= threshold) {
+        answer = round((left + right) / 2, 5)
+        break
+      }
+    }
+    
+    est_list[[i]] = answer
+  }
+  
+  return(unlist(est_list)) 
+}
+
+
+secant = function(start, threshold) {
+  
+  xt1_list = vector("list", length(start))
+  for (x0 in start) {
+    xt = x0
+    xt_1 = x0 - 0.1
+    while (TRUE) {
+      d2g = tryCatch({
+        estimate_d2g(xt, xt_1)
+      }, warning = function(w) {
+        cat("When xt =",xt,"xt-1 =",xt_1,", the second order derivative is Nan.\n")
+        return(1) 
+      })
+      
+      if (is.nan(d2g) || d2g == 0) {
+        xt = 'Not Found'
+        break
+      }
+      
+
+      if(d2g == 1){
+        xt = 'Not Found'
+        break
+      }
+      xt1 = xt - dg(xt) / d2g
+      
+      if (abs(xt1 - xt) < threshold) {
+        break
+      }
+      xt_1 = xt
+      xt = xt1
+    }
+    if (is.numeric(xt)) {
+      xt1_list[[which(start == x0)]] = round(xt, 5)
+    } else {
+      xt1_list[[which(start == x0)]] = xt
+    }
+
+  }
+  return(unlist(xt1_list))
+}
+
+
+```
+
+## Plot the function and guess maximum
+
+```{r, echo=FALSE}
+x = seq(from = 0, to = 4, by = 0.01)
+gx = g(x)
+plot(x=x, y=gx, type="l", col = "red",lwd = 2, ylab = "g(x)")
+# points(x=est_secant, y=g(est_secant))
+```
+
+I guess the maximum point would be 0.9 approximately.
+
+## Plot g'(x)
+
+```{r, echo=FALSE}
+plot(x=x, y=dg(x), type = "l", col = "blue",lwd =2)
+abline(a = 0, b = 0, lwd = 2, lty = 3) 
+# points(x=est_secant, y=dg(est_secant))
+```
+
+## Implement bisection method based on user input
+
+```{r, echo=FALSE}
+a = 0.8
+b = 1.0
+threshold = 0.001
+cat("User input: \n a: ", a, "\n b: ",b, "\n Criterion: ", threshold)
+b_op = bisection(a, b, threshold)
+cat("\nThe estimated maximum point using bisection method is:", b_op)
+```
+
+## Implement secant method based on user input
+
+```{r, echo=FALSE}
+start = 0.8
+cat("User input: \n start: ", start, "\n Criterion: ", threshold)
+s_op = secant(start, threshold)
+cat("\nThe estimated maximum point using secant method is:", s_op)
+```
+## Run the functions for different starting intervals/pairs of starting values 
+```{r, echo=FALSE}
+a_vec <- seq(from = 0.5, to = 1.0, by = 0.1)
+b_vec <- seq(from = 0.9, to = 1.4, by = 0.1)
+start_vec <- seq(from = 0.5, to = 2, by = 0.1)
+threshold <- 0.001
+
+# Apply the bisection method
+bisection_results <- bisection(a = a_vec, b = b_vec, threshold = threshold)
+
+# Create a data frame for bisection results
+bisection_df <- data.frame(
+  a = a_vec,
+  b = b_vec,
+  Estimated_Maximum = bisection_results
+)
+
+# Display the bisection results table
+knitr::kable(bisection_df, caption = "Bisection Method Results")
+
+# Apply the secant method
+secant_results <- secant(start = start_vec, threshold = threshold)
+
+# Create a data frame for secant results
+secant_df <- data.frame(
+  Starting_Point = start_vec,
+  Estimated_Maximum = secant_results
+)
+
+# Display the secant results table
+knitr::kable(secant_df, caption = "Secant Method Results")
+```
+
+# Question 2
+
+## Custom myvar function to estimate the variance 
+
+```{r, eval=FALSE}
+myvar = function(data) {
+  n = length(data)
+  sq_sum = sum(data^2)
+  sum_sq = sum(data)^2
+  var = (1/(n-1))*(sq_sum - (sum_sq/n))
+  return(var)
+}
+```
+
+## Generate a vector x = (x1, . . . , x10000) with 10000 random numbers with mean 108 and variance 1
+
+```{r, eval=FALSE} 
+n= 10000
+data = rnorm(n, mean = 10**8, sd = 1)
+```
+
+## Plot the differance between variance caculated using standerd variance estimation function and myvar() function
+
+```{r, echo=FALSE}
+myvar = function(data) {
+  n = length(data)
+  sq_sum = sum(data^2)
+  sum_sq = sum(data)^2
+  var = (1/(n-1))*(sq_sum - (sum_sq/n))
+  return(var)
+}
+
+n= 10000
+data = rnorm(n, mean = 10**8, sd = 1)
+
+Y = numeric(10000) 
+
+for (i in 2:10000) {
+  custom_var = myvar(data[1:i])
+  actual_var = var(data[1:i])
+  diff = custom_var - actual_var
+  Y[i] = diff
+}
+
+plot(2:n, Y[2:n], type = "l", col = "blue", xlab = "i", ylab = "Yi",
+     main = "Difference (Yi) Between myvar(Xi) and var(Xi)")
+abline(h = 0, col = "red", lty = 2)
+
+```
+
+
+
+The variance of a dataset \( x \) with \( n \) elements is given by:
+
+$$
+\text{Var}(x) = \frac{1}{n-1} \left( \sum_{i=1}^{n} x_i^2 - \frac{1}{n} \left( \sum_{i=1}^{n} x_i \right)^2 \right)
+$$
+
+This formula can cause numerical instability when \( x \) has very large values.
+
+The function `myvar` suffers from numerical instability due to how floating-point arithmetic handles large numbers. The term \( \sum x_i^2 \) and \( (\sum x_i)^2 / n \) can both be very large when \( x \) has a high mean. Subtracting these large values leads to a loss of precision. This means small variations in the data can result in significant errors when computing the variance.
+
+Also, the loss of precision grows as more data points are added, which explains why the error fluctuates as shown in the plot. The numerical errors are more noticeable when dealing with large values, making this formula unreliable in such cases.
+
+
+## Improved myvar function to estimate the variance precisely
+
+
+```{r, eval=FALSE}
+myvar_improved = function(data) {
+  n = length(data)
+  mu = mean(data)
+  var = sum((data-mu)^2)/(n-1)
+  return(var)
+}
+```{r, echo=FALSE}
+myvar_improved = function(data) {
+  n = length(data)
+  mu = mean(data)
+  var = sum((data-mu)^2)/(n-1)
+  return(var)
+}
+
+
+for (i in 2:10000) {
+  custom_var = myvar_improved(data[1:i])
+  actual_var = var(data[1:i])
+  diff = custom_var - actual_var
+  Y[i] = diff
+}
+
+plot(2:n, Y[2:n], type = "l", col = "blue", xlab = "i", ylab = "Yi",
+     main = "Difference (Yi) Between myvar(Xi) and var(Xi)")
+abline(h = 0, col = "red", lty = 2)
+
+```
+
+
+
+$$
+\text{Var}(x) = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2
+$$
+
+The improved function produces nearly identical results to R’s built-in `var()` function. This is because it computes variance using deviations from the mean, avoiding large intermediate values that lead to precision loss. 
+
+
+# Appendix
+
+```{r, eval=FALSE}
+# Question 1
+
 g = function(x){
   gx = log(x + 1) / (x ^ 1.5 + 1)
   return(gx)
@@ -55,15 +339,18 @@ bisection = function(a, b, threshold = 0.001) {
         left = mid  
       }
       else{
-        cat("The maximum is out of [",left,",",right,"].\n")
+        answer = 'Not Found'
         break
       }
       
       
-      if (abs(left - right) <= threshold) break
+      if (abs(left - right) <= threshold) {
+        answer = round((left + right) / 2, 5)
+        break
+      }
     }
-
-    est_list[[i]] = (left + right) / 2
+    
+    est_list[[i]] = answer
   }
   
   return(unlist(est_list)) 
@@ -71,7 +358,7 @@ bisection = function(a, b, threshold = 0.001) {
 
 
 secant = function(start, threshold) {
-
+  
   xt1_list = vector("list", length(start))
   for (x0 in start) {
     xt = x0
@@ -80,68 +367,66 @@ secant = function(start, threshold) {
       d2g = tryCatch({
         estimate_d2g(xt, xt_1)
       }, warning = function(w) {
-          cat("When xt =",xt,"xt-1 =",xt_1,", the second order derivative is Nan.\n")
-          return(1) 
-        })
+        cat("When xt =",xt,"xt-1 =",xt_1,", the second order derivative is Nan.\n")
+        return(1) 
+      })
+      
+      if (is.nan(d2g) || d2g == 0) {
+        xt = 'Not Found'
+        break
+      }
+      
+
       if(d2g == 1){
-        xt = 0
+        xt = 'Not Found'
         break
       }
       xt1 = xt - dg(xt) / d2g
-  
+      
       if (abs(xt1 - xt) < threshold) {
         break
       }
       xt_1 = xt
       xt = xt1
     }
-    xt1_list[[which(start == x0)]] = xt
+    if (is.numeric(xt)) {
+      xt1_list[[which(start == x0)]] = round(xt, 5)
+    } else {
+      xt1_list[[which(start == x0)]] = xt
+    }
+    
   }
   return(unlist(xt1_list))
 }
 
-```
 
-## Plot the function and guess maximum
-
-```{r, echo=FALSE}
 x = seq(from = 0, to = 4, by = 0.01)
 gx = g(x)
-plot(x=x, y=gx, type="l", col = "red",lwd = 5, ylab = "g(x)")
-# points(x=est_secant, y=g(est_secant))
-```
+plot(x=x, y=gx, type="l", col = "red",lwd = 2, ylab = "g(x)")
 
-I guess the maximum point would be 0.9 approximately.
 
-## Plot g'(x)
+plot(x=x, y=dg(x), type = "l", col = "blue",lwd = 1)
+abline(a = 0, b = 0, lwd = 1, lty = 3) 
 
-```{r, echo=FALSE}
-plot(x=x, y=dg(x), type = "l", col = "blue",lwd = 5)
-abline(a = 0, b = 0, lwd = 3, lty = 3) 
-# points(x=est_secant, y=dg(est_secant))
-```
 
-## Implement bisection method based on user input
 
-```{r, echo=FALSE}
 a = 0.8
 b = 1.0
 threshold = 0.001
 cat("User input: \n a: ", a, "\n b: ",b, "\n Criterion: ", threshold)
 b_op = bisection(a, b, threshold)
-cat("\nThe estimated maximum point using bisection method is:", round(b_op,5))
-```
+cat("\nThe estimated maximum point using bisection method is:", b_op)
 
-## Implement secant method based on user input
 
-```{r, echo=FALSE}
+
+
 start = 0.8
 cat("User input: \n start: ", start, "\n Criterion: ", threshold)
 s_op = secant(start, threshold)
-cat("\nThe estimated maximum point using secant method is:", round(s_op,5))
-```
-## Run the functions for different starting intervals/pairs of starting values 
-```{r, echo=FALSE}
+cat("\nThe estimated maximum point using secant method is:", s_op)
+
+
+
 a_vec = seq(from = 0.5, to = 1.0, by = 0.1)
 b_vec = seq(from = 0.9, to = 1.4, by = 0.1)
 start_vec = seq(from = 0.5, to = 2, by = 0.1)
@@ -149,12 +434,53 @@ cat("Bisection Method \n")
 bisection(a = a_vec, b = b_vec, threshold = threshold)
 cat("Secant Method \n")
 secant(start = start_vec, threshold = threshold)
-```
+
 
 # Question 2
 
-# Appendix
+set.seed(12345)
+myvar = function(data) {
+  n = length(data)
+  sq_sum = sum(data^2)
+  sum_sq = sum(data)^2
+  var = (1/(n-1))*(sq_sum - (sum_sq/n))
+  return(var)
+}
 
-```{r}
-# Question 1
+n= 10000
+data = rnorm(10000, mean = 10**8, sd = 1)
+
+Y = numeric(10000) 
+
+for (i in 2:10000) {
+  custom_var = myvar(data[1:i])
+  actual_var = var(data[1:i])
+  diff = custom_var - actual_var
+  Y[i] = diff
+}
+
+Y
+
+plot(2:n, Y[2:n], type = "l", col = "blue", xlab = "i", ylab = "Yi",
+     main = "Difference (Yi) Between myvar(Xi) and var(Xi)")
+abline(h = 0, col = "red", lty = 2)
+
+myvar_improved = function(data) {
+  n = length(data)
+  mu = mean(data)
+  var = sum((data-mu)^2)/(n-1)
+  return(var)
+}
+
+
+for (i in 2:10000) {
+  custom_var = myvar_improved(data[1:i])
+  actual_var = var(data[1:i])
+  diff = custom_var - actual_var
+  Y[i] = diff
+}
+
+plot(2:n, Y[2:n], type = "l", col = "blue", xlab = "i", ylab = "Yi",
+     main = "Difference (Yi) Between myvar(Xi) and var(Xi)")
+abline(h = 0, col = "red", lty = 2)
 ```
