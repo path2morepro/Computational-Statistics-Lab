@@ -1,0 +1,4 @@
+"0","intervals = seq(from = 0.2, to = 2, by = 0.1)"
+"0","start = seq(from = 0.2, to = 1.3, by = 0.01)"
+"0","est_bisection = bisection(intervals = intervals, threshold = 0.01)"
+"0","est_secant = secant(start = start, threshold = 0.01)"
