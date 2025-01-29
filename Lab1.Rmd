@@ -5,6 +5,7 @@ date: "`r Sys.Date()`"
 output:
   pdf_document:
     toc: true
+    number_sections: true
 ---
 
 # Collaborations:
@@ -12,7 +13,6 @@ output:
 Cui Qingxuan: Responsible for the question 1.
 
 Nisal Amashan: Responsible for the question 2.
-
 
 # Question 1
 
@@ -37,16 +37,18 @@ estimate_d2g = function(xt, xt_1){
 
 bisection = function(a, b, threshold = 0.001) {
   est_list = vector("list", length(a))
-  
+  it_list = vector("list", length(a))
   for (i in seq_along(a)) {
     left = a[i]
     right = b[i]
+    iterations = 0
     
     while (abs(left - right) > threshold) {
       mid = (left + right) / 2 
       dg_mid = dg(mid)  
       dg_left = dg(left)  
       dg_right = dg(right) 
+      iterations = iterations + 1
       
       
       if (dg_left * dg_mid <= 0) {
@@ -67,18 +69,21 @@ bisection = function(a, b, threshold = 0.001) {
     }
     
     est_list[[i]] = answer
+    it_list[[i]] = iterations
   }
   
-  return(unlist(est_list)) 
+  return(c(unlist(est_list), unlist(it_list))) 
 }
 
 
 secant = function(start, threshold) {
   
   xt1_list = vector("list", length(start))
+  it_list = vector("list", length(start))
   for (x0 in start) {
     xt = x0
     xt_1 = x0 - 0.1
+    iterations = 0
     while (TRUE) {
       d2g = tryCatch({
         estimate_d2g(xt, xt_1)
@@ -104,26 +109,25 @@ secant = function(start, threshold) {
       }
       xt_1 = xt
       xt = xt1
+      iterations = iterations + 1
     }
     if (is.numeric(xt)) {
       xt1_list[[which(start == x0)]] = round(xt, 5)
     } else {
       xt1_list[[which(start == x0)]] = xt
     }
-
+    it_list[[which(start == x0)]] = iterations
   }
-  return(unlist(xt1_list))
+  return(c(unlist(xt1_list), unlist(it_list)))
 }
-
-
 ```
 
 ## Plot the function and guess maximum
 
-```{r, echo=FALSE}
+```{r, echo=FALSE,fig.width=6, fig.height=4}
 x = seq(from = 0, to = 4, by = 0.01)
 gx = g(x)
-plot(x=x, y=gx, type="l", col = "red",lwd = 2, ylab = "g(x)")
+plot(x=x, y=gx, type="l", col = "red",lwd = 2, ylab = "g(x)", main = "Plot of g(x), x in [0,4]")
 # points(x=est_secant, y=g(est_secant))
 ```
 
@@ -131,8 +135,8 @@ I guess the maximum point would be 0.9 approximately.
 
 ## Plot g'(x)
 
-```{r, echo=FALSE}
-plot(x=x, y=dg(x), type = "l", col = "blue",lwd =2)
+```{r, echo=FALSE,fig.width=6, fig.height=4}
+plot(x=x, y=dg(x), type = "l", col = "blue",lwd =2, ylab = "g'(x)",main = "Plot of g'(x), x in [0,4]")
 abline(a = 0, b = 0, lwd = 2, lty = 3) 
 # points(x=est_secant, y=dg(est_secant))
 ```
@@ -145,7 +149,7 @@ b = 1.0
 threshold = 0.001
 cat("User input: \n a: ", a, "\n b: ",b, "\n Criterion: ", threshold)
 b_op = bisection(a, b, threshold)
-cat("\nThe estimated maximum point using bisection method is:", b_op)
+cat("\nThe estimated maximum point using bisection method is:", b_op[1])
 ```
 
 ## Implement secant method based on user input
@@ -154,9 +158,11 @@ cat("\nThe estimated maximum point using bisection method is:", b_op)
 start = 0.8
 cat("User input: \n start: ", start, "\n Criterion: ", threshold)
 s_op = secant(start, threshold)
-cat("\nThe estimated maximum point using secant method is:", s_op)
+cat("\nThe estimated maximum point using secant method is:", s_op[1])
 ```
-## Run the functions for different starting intervals/pairs of starting values 
+
+## Run the functions for different starting intervals/pairs of starting values
+
 ```{r, echo=FALSE}
 a_vec <- seq(from = 0.5, to = 1.0, by = 0.1)
 b_vec <- seq(from = 0.9, to = 1.4, by = 0.1)
@@ -170,7 +176,8 @@ bisection_results <- bisection(a = a_vec, b = b_vec, threshold = threshold)
 bisection_df <- data.frame(
   a = a_vec,
   b = b_vec,
-  Estimated_Maximum = bisection_results
+  Estimated_Maximum = bisection_results[1:6],
+  Iterations_Times = bisection_results[-6:-1]
 )
 
 # Display the bisection results table
@@ -182,16 +189,46 @@ secant_results <- secant(start = start_vec, threshold = threshold)
 # Create a data frame for secant results
 secant_df <- data.frame(
   Starting_Point = start_vec,
-  Estimated_Maximum = secant_results
+  Estimated_Maximum = secant_results[1:16],
+  Iterations_Times = secant_results[-16:-1]
 )
 
 # Display the secant results table
 knitr::kable(secant_df, caption = "Secant Method Results")
 ```
 
+### Summary
+
+For the **bisection method**, if the true maximum is not within the interval $[a, b]$, it cannot perform optimization.
+
+For the **secant method**, based on our simulation, once $x_t$ exceeds 1.5, it fails to implement optimization.
+
+### Reasons
+
+The bisection method is effective only when the true maximum lies within the specified interval $[a, b]$. If the maximum is outside this interval, the method cannot locate it.
+
+For the secant method, consider the example where $x_0 = 1.6$. Here, the first-order derivative is significantly smaller than the estimate of the second-order derivative (-0.071 and -0.029, respectively). This results in $x_{t+1} = -0.81$, where the first-order derivative does not exist because it falls outside the boundary of $x$.
+
+### Comparisons
+
+We recorded the number of iterations for each simulation. The data shows that:
+
+-   The **bisection method** generally requires more iterations to optimize but can detect exceptions after the first round.
+-   The **secant method** typically requires fewer iterations on average but may consume more rounds when an exception occurs.
+
+## Discussion
+
+### Would you use bisection or secant here?
+
+I would prefer to use the **bisection method** because, from the plot of $g'(x)$, it is relatively easy to determine an approximate interval to initialize the algorithm. This approach avoids the limitations of the bisection method and does not require computing the derivative of the function.
+
+### When would you switch and use the other algorithm?
+
+As mentioned earlier, a switch to the **secant method** might be necessary when we cannot determine a suitable interval by observing the plot. In such cases, the secant method becomes a viable alternative.
+
 # Question 2
 
-## Custom myvar function to estimate the variance 
+## Custom myvar function to estimate the variance
 
 ```{r, eval=FALSE}
 myvar = function(data) {
@@ -205,7 +242,7 @@ myvar = function(data) {
 
 ## Generate a vector x = (x1, . . . , x10000) with 10000 random numbers with mean 108 and variance 1
 
-```{r, eval=FALSE} 
+```{r, eval=FALSE}
 n= 10000
 data = rnorm(n, mean = 10**8, sd = 1)
 ```
@@ -239,23 +276,19 @@ abline(h = 0, col = "red", lty = 2)
 
 ```
 
-
-
-The variance of a dataset \( x \) with \( n \) elements is given by:
+The variance of a dataset $x$ with $n$ elements is given by:
 
 $$
 \text{Var}(x) = \frac{1}{n-1} \left( \sum_{i=1}^{n} x_i^2 - \frac{1}{n} \left( \sum_{i=1}^{n} x_i \right)^2 \right)
 $$
 
-This formula can cause numerical instability when \( x \) has very large values.
+This formula can cause numerical instability when $x$ has very large values.
 
-The function `myvar` suffers from numerical instability due to how floating-point arithmetic handles large numbers. The term \( \sum x_i^2 \) and \( (\sum x_i)^2 / n \) can both be very large when \( x \) has a high mean. Subtracting these large values leads to a loss of precision. This means small variations in the data can result in significant errors when computing the variance.
+The function `myvar` suffers from numerical instability due to how floating-point arithmetic handles large numbers. The term $\sum x_i^2$ and $(\sum x_i)^2 / n$ can both be very large when $x$ has a high mean. Subtracting these large values leads to a loss of precision. This means small variations in the data can result in significant errors when computing the variance.
 
 Also, the loss of precision grows as more data points are added, which explains why the error fluctuates as shown in the plot. The numerical errors are more noticeable when dealing with large values, making this formula unreliable in such cases.
 
-
 ## Improved myvar function to estimate the variance precisely
-
 
 ```{r, eval=FALSE}
 myvar_improved = function(data) {
@@ -264,7 +297,6 @@ myvar_improved = function(data) {
   var = sum((data-mu)^2)/(n-1)
   return(var)
 }
-```{r, echo=FALSE}
 myvar_improved = function(data) {
   n = length(data)
   mu = mean(data)
@@ -286,14 +318,11 @@ abline(h = 0, col = "red", lty = 2)
 
 ```
 
-
-
 $$
 \text{Var}(x) = \frac{1}{n-1} \sum_{i=1}^{n} (x_i - \bar{x})^2
 $$
 
-The improved function produces nearly identical results to R’s built-in `var()` function. This is because it computes variance using deviations from the mean, avoiding large intermediate values that lead to precision loss. 
-
+The improved function produces nearly identical results to R’s built-in `var()` function. This is because it computes variance using deviations from the mean, avoiding large intermediate values that lead to precision loss.
 
 # Appendix
 
@@ -367,7 +396,6 @@ secant = function(start, threshold) {
       d2g = tryCatch({
         estimate_d2g(xt, xt_1)
       }, warning = function(w) {
-        cat("When xt =",xt,"xt-1 =",xt_1,", the second order derivative is Nan.\n")
         return(1) 
       })
       
