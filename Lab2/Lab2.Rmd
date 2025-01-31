@@ -1,0 +1,257 @@
+---
+title: "Lab2"
+author: "Cui Qingxuan, Nisal Amashan"
+date: "`r Sys.Date()`"
+output:
+  pdf_document:
+    toc: true
+    number_sections: true
+---
+
+# Collaborations:
+
+Cui Qingxuan: Responsible for the question 1.
+
+Nisal Amashan: Responsible for the question 2.
+
+# Question 1
+
+```{r, inclue=FALSE}
+verify = function(x, y){
+  x_codt = all(x >= -1.5 & x <= 4)
+  y_codt = all(y >= -3 & y <= 4)
+  return(x_codt&y_codt)
+}
+f_xy = function(x, y){
+  return(sin(x+y) + (x-y)^2 - 1.5*x + 2.5*y + 1)
+}
+
+derv = function(order, var, x, y){
+  if(order == 2){
+    if(var == "xy"){
+      return(-sin(x+y) - 2)
+    }
+    else{
+      return(-sin(x+y) + 2)
+    }
+  }
+  else if(order == 1){
+    if(var == "x"){
+      return(cos(x+y) + 2*(x-y) - 1.5)
+    }
+    else if(var == "y"){
+      return(cos(x+y) - 2*(x-y) + 2.5)
+    }
+  }
+}
+
+gradient = function(x, y){
+  df_dx = derv(order = 1, var = "x", x, y)
+  df_dy = derv(order = 1, var = "y", x, y)
+
+  gradient = matrix(c(df_dx,df_dy), ncol=1)
+  return(gradient)
+}
+
+hessian_M = function(x, y){
+  df2 = derv(order = 2, var = "x", x, y)
+  df2_xy = derv(order = 2, var = "xy", x, y)
+  hessian_m = matrix(c(df2, df2_xy, df2_xy, df2), ncol=2)
+  return(hessian_m)
+}
+
+newton = function(x0, y0){
+  cad = list()
+  for(i in 1:length(x0)){
+    xt = matrix(c(x0[i], y0[i]), ncol=1)
+    while(TRUE){
+      dev_mul = solve(hessian_M(xt[1], xt[2])) %*% gradient(xt[1], xt[2])
+      xt1 = xt - dev_mul
+      if(all(abs(xt - xt1) < 0.001)){
+        cad = append(cad, list(xt1))
+        break
+      }
+      xt = xt1
+    }
+  }
+  return(cad)
+}
+```
+
+# Contour Plot for the Function
+
+The function: $$f(x, y) = \sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1$$ The plot:
+
+```{r, echo=FALSE}
+x_vec = seq(from = -1.5, to = 4, length.out = 500)
+y_vec = seq(from = -3, to = 4, length.out = 500)
+if(verify(x_vec, y_vec)){
+  z = outer(x_vec, y_vec, f_xy)
+}
+
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+```
+
+# Derive the Gradient and Hessian Matrix
+
+```{r, echo=FALSE}
+x = 1.5
+y = 2
+cat("Assume that x =",x, "y =",y,"\n")
+cat("Gradient:\n") 
+print(gradient(x, y))
+cat("\n")
+cat("Hessian Matrix\n")
+print(hessian_M(x, y)) 
+```
+
+# Implement Newton Algorithm
+
+Keep assuming that x = 1.5, y = 2
+
+```{r, echo=FALSE}
+# cat("Keep assuming that x =",x, "y =",y,"\n")
+opti = unlist(newton(x, y))
+# cat("The candidate data point is: (", opti[1], opti[2], ")")
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+points(x, y,col="blue", pch=19)
+points(opti[1], opti[2],col="red", pch=19)
+text(x, y,col="blue",labels = "Start Point", pos = 4)
+text(opti[1], opti[2],col="red", labels = "Candidate Point", pos = 4)
+```
+
+# Test Method
+
+```{r, echo=FALSE}
+n = 10
+x_cadi_test = rep(0, n)
+y_cadi_test = rep(0, n)
+x_random = runif(n, min=-1.5, max=4)
+y_random = runif(n, min=-3, max=4)
+opti_test = newton(x_random, y_random)
+for(i in opti_test){
+  x_cadi_test[i] = unlist(opti_test[1][1])[1]
+  y_cadi_test[i] = unlist(opti_test[1][1])[2]
+}
+
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+points(x_cadi_test, y_cadi_test,col="red",cex=0.5, pch=19)
+```
+
+# Question2
+
+# Appendix
+
+```{r, echo=TRUE, eval=FALSE}
+# Question 1
+verify = function(x, y){
+  x_codt = all(x >= -1.5 & x <= 4)
+  y_codt = all(y >= -3 & y <= 4)
+  return(x_codt&y_codt)
+}
+f_xy = function(x, y){
+  return(sin(x+y) + (x-y)^2 - 1.5*x + 2.5*y + 1)
+}
+
+derv = function(order, var, x, y){
+  if(order == 2){
+    if(var == "xy"){
+      return(-sin(x+y) - 2)
+    }
+    else{
+      return(-sin(x+y) + 2)
+    }
+  }
+  else if(order == 1){
+    if(var == "x"){
+      return(cos(x+y) + 2*(x-y) - 1.5)
+    }
+    else if(var == "y"){
+      return(cos(x+y) - 2*(x-y) + 2.5)
+    }
+  }
+}
+
+gradient = function(x, y){
+  df_dx = derv(order = 1, var = "x", x, y)
+  df_dy = derv(order = 1, var = "y", x, y)
+
+  gradient = matrix(c(df_dx,df_dy), ncol=1)
+  return(gradient)
+}
+
+hessian_M = function(x, y){
+  df2 = derv(order = 2, var = "x", x, y)
+  df2_xy = derv(order = 2, var = "xy", x, y)
+  hessian_m = matrix(c(df2, df2_xy, df2_xy, df2), ncol=2)
+  return(hessian_m)
+}
+
+newton = function(x0, y0){
+  cad = list()
+  for(i in 1:length(x0)){
+    xt = matrix(c(x0[i], y0[i]), ncol=1)
+    while(TRUE){
+      dev_mul = solve(hessian_M(xt[1], xt[2])) %*% gradient(xt[1], xt[2])
+      xt1 = xt - dev_mul
+      if(all(abs(xt - xt1) < 0.001)){
+        cad = append(cad, list(xt1))
+        break
+      }
+      xt = xt1
+    }
+  }
+  return(cad)
+}
+
+# Plot of function
+x_vec = seq(from = -1.5, to = 4, length.out = 500)
+y_vec = seq(from = -3, to = 4, length.out = 500)
+if(verify(x_vec, y_vec)){
+  z = outer(x_vec, y_vec, f_xy)
+}
+
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+
+x_vec = seq(from = -1.5, to = 4, length.out = 500)
+y_vec = seq(from = -3, to = 4, length.out = 500)
+if(verify(x_vec, y_vec)){
+  z = outer(x_vec, y_vec, f_xy)
+}
+
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+
+# Compute gradient and Hessian matrix
+x = 1.5
+y = 2
+cat("Assume that x =",x, "y =",y,"\n")
+cat("Gradient:\n") 
+print(gradient(x, y))
+cat("\n")
+cat("Hessian Matrix\n")
+print(hessian_M(x, y)) 
+
+
+# Simulation case
+opti = unlist(newton(x, y))
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+points(x, y,col="blue", pch=19)
+points(opti[1], opti[2],col="red", pch=19)
+text(x, y,col="blue",labels = "Start Point", pos = 4)
+text(opti[1], opti[2],col="red", labels = "Candidate Point", pos = 4)
+
+# Test on n=10 data 
+n = 10
+x_cadi_test = rep(0, n)
+y_cadi_test = rep(0, n)
+x_random = runif(n, min=-1.5, max=4)
+y_random = runif(n, min=-3, max=4)
+opti_test = newton(x_random, y_random)
+for(i in opti_test){
+  x_cadi_test[i] = unlist(opti_test[1][1])[1]
+  y_cadi_test[i] = unlist(opti_test[1][1])[2]
+}
+
+contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
+points(x_cadi_test, y_cadi_test,col="red",cex=0.5, pch=19)
+```
