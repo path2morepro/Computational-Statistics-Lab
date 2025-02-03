@@ -6,9 +6,12 @@ output:
   pdf_document:
     toc: true
     number_sections: true
+    extra_dependencies: ["booktabs"]
+header-includes:
+  - \setlength{\tabcolsep}{18pt} 
 ---
 
-# Collaborations:
+# Collaborations
 
 Cui Qingxuan: Responsible for the question 1.
 
@@ -16,7 +19,8 @@ Nisal Amashan: Responsible for the question 2.
 
 # Question 1
 
-```{r, inclue=FALSE}
+```{r, echo=FALSE}
+library(knitr)
 verify = function(x, y){
   x_codt = all(x >= -1.5 & x <= 4)
   y_codt = all(y >= -3 & y <= 4)
@@ -44,6 +48,22 @@ derv = function(order, var, x, y){
     }
   }
 }
+eigenCompute = function(points){
+  eigen_values = list()
+  for(i in points){
+    if(is.character(i)){
+      eigen_values = append(eigen_values, list("invalid"))
+      next
+    }
+    x = unlist(i)[1]
+    y = unlist(i)[2]
+    hessian_matrix = hessian_M(x, y)
+    eigen_v = eigen(hessian_matrix)$values
+    eigen_values = append(eigen_values, list(eigen_v))
+  }
+  return(eigen_values)
+}
+
 
 gradient = function(x, y){
   df_dx = derv(order = 1, var = "x", x, y)
@@ -76,13 +96,24 @@ newton = function(x0, y0){
   }
   return(cad)
 }
+
+format_points = function(points_list) {
+  sapply(points_list, function(p){
+    if(is.numeric(p)){
+      sprintf("(%.2f, %.2f)", p[1], p[2])
+    }
+    else{
+      sprintf("%s", p)
+    }
+  })
+}
 ```
 
-# Contour Plot for the Function
+## Contour Plot for the Function
 
 The function: $$f(x, y) = \sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1$$ The plot:
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, fig.width=6, fig.height=4}
 x_vec = seq(from = -1.5, to = 4, length.out = 500)
 y_vec = seq(from = -3, to = 4, length.out = 500)
 if(verify(x_vec, y_vec)){
@@ -92,57 +123,112 @@ if(verify(x_vec, y_vec)){
 contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
 ```
 
-# Derive the Gradient and Hessian Matrix
+## Derive the Gradient and Hessian Matrix
 
-```{r, echo=FALSE}
+```{r, echo=FALSE, warning=FALSE}
+library(pander)
 x = 1.5
 y = 2
 cat("Assume that x =",x, "y =",y,"\n")
 cat("Gradient:\n") 
-print(gradient(x, y))
-cat("\n")
+gra = gradient(x, y)
+pander(gra)
+hm = hessian_M(x, y)
 cat("Hessian Matrix\n")
-print(hessian_M(x, y)) 
+pander(hm)
 ```
 
-# Implement Newton Algorithm
+## Implement Newton Method
 
-Keep assuming that x = 1.5, y = 2
-
-```{r, echo=FALSE}
-# cat("Keep assuming that x =",x, "y =",y,"\n")
-opti = unlist(newton(x, y))
-# cat("The candidate data point is: (", opti[1], opti[2], ")")
-contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
-points(x, y,col="blue", pch=19)
-points(opti[1], opti[2],col="red", pch=19)
-text(x, y,col="blue",labels = "Start Point", pos = 4)
-text(opti[1], opti[2],col="red", labels = "Candidate Point", pos = 4)
+```{r, eval = FALSE}
+newton = function(x0, y0){
+  cad = list()
+  for(i in 1:length(x0)){
+    xt = matrix(c(x0[i], y0[i]), ncol=1)
+    while(TRUE){
+      dev_mul = solve(hessian_M(xt[1], xt[2])) %*% gradient(xt[1], xt[2])
+      xt1 = xt - dev_mul
+      if(all(abs(xt - xt1) < 0.001)){
+        cad = append(cad, list(xt1))
+        break
+      }
+      xt = xt1
+    }
+  }
+  return(cad)
+}
 ```
 
-# Test Method
+
+## Test Method
 
 ```{r, echo=FALSE}
 n = 10
-x_cadi_test = rep(0, n)
-y_cadi_test = rep(0, n)
-x_random = runif(n, min=-1.5, max=4)
-y_random = runif(n, min=-3, max=4)
-opti_test = newton(x_random, y_random)
-for(i in opti_test){
-  x_cadi_test[i] = unlist(opti_test[1][1])[1]
-  y_cadi_test[i] = unlist(opti_test[1][1])[2]
+x_random = runif(n, min = -1.5, max = 3)
+y_random = runif(n, min = -3, max = 3)
+
+x_random[1] = -0.49 
+y_random[1] = -2.05
+start_points = vector("list", n)
+candi = vector("list", n)
+fxy = rep(0, n)
+opti_test = newton(x_random, y_random) 
+
+for (i in 1:n) {
+  start_points[[i]] = round(c(x_random[i], y_random[i]), 2)
+  candi_point = as.vector(opti_test[[i]])
+  cadi_x = candi_point[1]
+  cadi_y = candi_point[2]
+  if(verify(cadi_x, cadi_y)){
+    candi[[i]] = round(candi_point, 2)
+    fxy[i] = round(f_xy(cadi_x, cadi_y) ,2)
+  }
+  else{
+    candi[[i]] = "invalid" 
+    fxy[i] = "invalid"
+  }
+  
 }
 
-contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
-points(x_cadi_test, y_cadi_test,col="red",cex=0.5, pch=19)
+outcome = data.frame(
+  start_points = format_points(start_points),
+  candidates = format_points(candi),
+  eigen_values = format_points(eigenCompute(candi)),
+  function_value = fxy
+)
+
+# print(outcome)
+kable(outcome) 
+```
+
+## Summary
+
+**There are four possible outcomes in the simulation:**
+
+Global minimum found (green point): The eigenvalues are greater than 0, and the starting point is close to the coordinates of the global minimum.
+
+**Local minimum found (blue point):** The eigenvalues are greater than 0, but the starting point is farther from the coordinates of the global minimum.
+
+**Saddle point (red point):** One eigenvalue is greater than 0, while the other is less than 0.
+
+**Invalid point:** The simulated minimum coordinates fall outside the defined domain.
+
+```{r, echo=FALSE, fig.width=6, fig.height=4}
+contour(x_vec, y_vec, z, main = "Possible Outcomes in the Simulation", xlab="x", ylab="y", nlevels = 50)
+
+points(1.55, 0.55,  col = "red", pch = 16, cex = 1.0)
+text(1.55, 0.55, "Saddle Point", pos = 3, col = "red") 
+points(2.59, 1.59,  col = "blue", pch = 16, cex = 1.0)
+text(2.59, 1.59, "Local Minimum", pos = 3, col = "blue") 
+points(-0.55, -1.55,  col = "green", pch = 16, cex = 1.0)
+text(-0.55, -1.55, "Global Minimum", pos = 3, col = "green") 
 ```
 
 # Question2
 
 # Appendix
 
-```{r, echo=TRUE, eval=FALSE}
+```{r, eval=FALSE}
 # Question 1
 verify = function(x, y){
   x_codt = all(x >= -1.5 & x <= 4)
@@ -186,7 +272,7 @@ hessian_M = function(x, y){
   hessian_m = matrix(c(df2, df2_xy, df2_xy, df2), ncol=2)
   return(hessian_m)
 }
-
+# Implement Newton Method
 newton = function(x0, y0){
   cad = list()
   for(i in 1:length(x0)){
@@ -213,45 +299,56 @@ if(verify(x_vec, y_vec)){
 
 contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
 
-x_vec = seq(from = -1.5, to = 4, length.out = 500)
-y_vec = seq(from = -3, to = 4, length.out = 500)
-if(verify(x_vec, y_vec)){
-  z = outer(x_vec, y_vec, f_xy)
-}
-
-contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
-
 # Compute gradient and Hessian matrix
+library(pander)
 x = 1.5
 y = 2
 cat("Assume that x =",x, "y =",y,"\n")
 cat("Gradient:\n") 
-print(gradient(x, y))
-cat("\n")
+gra = gradient(x, y)
+pander(gra)
+hm = hessian_M(x, y)
 cat("Hessian Matrix\n")
-print(hessian_M(x, y)) 
+pander(hm)
 
+# Test on n=5 data 
+n = 5
+x_random = runif(n, min = -1.5, max = 4)
+y_random = runif(n, min = -3, max = 4)
+start_points = vector("list", n)
+candi = vector("list", n)
+fxy = rep(0, n)
+opti_test = newton(x_random, y_random) 
 
-# Simulation case
-opti = unlist(newton(x, y))
-contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
-points(x, y,col="blue", pch=19)
-points(opti[1], opti[2],col="red", pch=19)
-text(x, y,col="blue",labels = "Start Point", pos = 4)
-text(opti[1], opti[2],col="red", labels = "Candidate Point", pos = 4)
-
-# Test on n=10 data 
-n = 10
-x_cadi_test = rep(0, n)
-y_cadi_test = rep(0, n)
-x_random = runif(n, min=-1.5, max=4)
-y_random = runif(n, min=-3, max=4)
-opti_test = newton(x_random, y_random)
-for(i in opti_test){
-  x_cadi_test[i] = unlist(opti_test[1][1])[1]
-  y_cadi_test[i] = unlist(opti_test[1][1])[2]
+for (i in 1:n) {
+  start_points[[i]] = round(c(x_random[i], y_random[i]), 2)
+  candi_point = as.vector(opti_test[[i]])
+  cadi_x = candi_point[1]
+  cadi_y = candi_point[2]
+  if(verify(cadi_x, cadi_y)){
+    candi[[i]] = round(candi_point, 2)
+    fxy[i] = round(f_xy(cadi_x, cadi_y) ,2)
+  }
+  else{
+    candi[[i]] = "invalid" 
+    fxy[i] = "invalid"
+  }
+  
 }
 
-contour(x_vec, y_vec, z, main = "Contour Plot of f(x, y) = sin(x + y) + (x - y)^2 - 1.5x + 2.5y + 1", xlab="x", ylab="y")
-points(x_cadi_test, y_cadi_test,col="red",cex=0.5, pch=19)
+outcome = data.frame(
+  start_points = format_points(start_points),
+  eigen_values = format_points(eigenCompute(start_points)),
+  candidates = format_points(candi),
+  function_value = fxy
+)
+
+contour(x_vec, y_vec, z, main = "Possible Outcomes in the Simulation", xlab="x", ylab="y", nlevels = 50)
+
+points(1.55, 0.55,  col = "red", pch = 16, cex = 1.0)
+text(1.55, 0.55, "Saddle Point", pos = 3, col = "red") 
+points(2.59, 1.59,  col = "blue", pch = 16, cex = 1.0)
+text(2.59, 1.59, "Local Minimum", pos = 3, col = "blue") 
+points(-0.55, -1.55,  col = "green", pch = 16, cex = 1.0)
+text(-0.55, -1.55, "Global Minimum", pos = 3, col = "green") 
 ```
