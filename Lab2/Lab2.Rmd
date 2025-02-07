@@ -205,7 +205,7 @@ kable(outcome)
 
 **There are four possible outcomes in the simulation:**
 
-Global minimum found (green point): The eigenvalues are greater than 0, and the starting point is close to the coordinates of the global minimum.
+**Global minimum found (green point):** The eigenvalues are greater than 0, and the starting point is close to the coordinates of the global minimum.
 
 **Local minimum found (blue point):** The eigenvalues are greater than 0, but the starting point is farther from the coordinates of the global minimum.
 
