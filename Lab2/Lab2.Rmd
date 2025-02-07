@@ -224,7 +224,116 @@ points(-0.55, -1.55,  col = "green", pch = 16, cex = 1.0)
 text(-0.55, -1.55, "Global Minimum", pos = 3, col = "green") 
 ```
 
+
+
+
+
+
+
+
+
+
+
+
+
 # Question2
+
+## Compute the ML-estimator
+
+
+In this analysis, we estimate the logistic regression parameters \((\beta_0, \beta_1)\) by maximizing the log-likelihood function. The logistic regression model is given by
+
+\[
+p(x) = \frac{1}{1 + \exp(-(\beta_0 + \beta_1 x))},
+\]
+
+and the corresponding log-likelihood function is
+
+\[
+\ell(\beta_0, \beta_1) = \sum_{i=1}^{n} \Bigl[ y_i \log\bigl(p(x_i)\bigr) + (1-y_i) \log\bigl(1-p(x_i)\bigr) \Bigr],
+\]
+
+where \(y_i\) is the binary outcome for observation \(i\) and \(x_i\) is the corresponding predictor (dose).
+
+We use the steepest ascent method to maximize the log-likelihood. In this method, the parameter estimates are updated in the direction of the gradient.
+
+The algorithm converged to the following estimates:
+
+- \(\hat{\beta}_0 \approx -0.00901\)
+- \(\hat{\beta}_1 \approx 1.26125\)
+
+
+The algorithm required 80 evaluations of the log-likelihood function and 28 evaluations of the gradient.
+
+
+## Comparison of Two Backtracking Line Search Variants
+
+In this part, we compute the maximum likelihood estimator for the logistic regression parameters \((\beta_0, \beta_1)\) using the steepest ascent method with a backtracking line search. We use a stopping criterion that ensures the estimates are accurate to five decimal places. The starting value for the parameters is set to \((\beta_0, \beta_1) = (-0.2, 1)\).
+
+We try two variants of the backtracking strategy:
+  
+1. **Variant 1:** The step size is halved repeatedly (i.e., \(\alpha \leftarrow \alpha/2\)) until an improvement in the log-likelihood is observed.
+2. **Variant 2:** The step size is reduced by multiplying it by 0.8 (i.e., \(\alpha \leftarrow 0.8 \cdot \alpha\)) until the log-likelihood increases.
+
+
+- **Variant 1 (alpha halved):**  
+  - Estimated parameters:  
+    \(\hat{\beta}_0 \approx -0.00842\) and \(\hat{\beta}_1 \approx 1.26052\)  
+  - Function evaluations: **56**  
+  - Gradient evaluations: **19**
+
+- **Variant 2 (alpha reduced by 20%):**  
+  - Estimated parameters:  
+    \(\hat{\beta}_0 \approx -0.00968\) and \(\hat{\beta}_1 \approx 1.26221\)  
+  - Function evaluations: **140**  
+  - Gradient evaluations: **28**
+
+Comparing the two variants, Variant 1 converged with significantly fewer function and gradient evaluations than Variant 2. This suggests that, for our dataset, the strategy of halving the step size is more efficient than reducing it by 20%.
+
+
+## Comparison Using `optim` with BFGS and Nelder-Mead
+
+We now use the function `optim` with both the BFGS and the Nelder-Mead algorithms to compute the ML estimator for the logistic regression parameters. The goal is to compare the results to those obtained in part (b) and to examine the number of function and gradient evaluations reported by `optim`.
+
+
+**BFGS Method:**
+
+- **Parameter estimates:**  
+  \(\hat{\beta}_0 \approx -0.008963304\) and \(\hat{\beta}_1 \approx 1.262923934\)
+- **Negative log-likelihood value:** 6.484279
+- **Function evaluations:** 9  
+- **Gradient evaluations:** 6
+
+**Nelder-Mead Method:**
+
+- **Parameter estimates:**  
+  \(\hat{\beta}_0 \approx -0.007853699\) and \(\hat{\beta}_1 \approx 1.262287140\)
+- **Negative log-likelihood value:** 6.484281
+- **Function evaluations:** 33  
+- **Gradient evaluations:** Not applicable
+
+#### Precision of Results
+
+Both methods yield very similar parameter estimates and nearly identical negative log-likelihood values, indicating that the precision of the results is comparable to those obtained in part (b).
+
+#### Efficiency (Evaluations)
+
+The BFGS method required significantly fewer function evaluations (9 vs. 33) than the Nelder-Mead method. This suggests that BFGS is more efficient, likely due to its use of gradient information.
+
+## ML Estimation Using `glm` and Comparison with Previous Results
+
+We now use the built-in `glm` function in R to obtain the maximum likelihood solution for the logistic regression model. 
+
+
+The estimated coefficients from `glm` are:
+
+- **Intercept:** \(\hat{\beta}_0 \approx -0.00936\)
+- **Slope:** \(\hat{\beta}_1 \approx 1.26282\)
+
+The estimates obtained from `glm` are extremely close to those from the BFGS optimization. The differences are only in the fourth or fifth decimal place, which indicates that both methods yield essentially the same maximum likelihood estimates.
+
+
+
 
 # Appendix
 
@@ -351,4 +460,182 @@ points(2.59, 1.59,  col = "blue", pch = 16, cex = 1.0)
 text(2.59, 1.59, "Local Minimum", pos = 3, col = "blue") 
 points(-0.55, -1.55,  col = "green", pch = 16, cex = 1.0)
 text(-0.55, -1.55, "Global Minimum", pos = 3, col = "green") 
+
+
+
+# Question 2
+
+x <- c(0, 0, 0, 0.1, 0.1, 0.3, 0.3, 0.9, 0.9, 0.9)  # Doses
+y <- c(0, 0, 1, 0, 1, 1, 1, 0, 1, 1)     
+
+# Initialize counters
+fn_counter <<- 0
+gr_counter <<- 0
+
+logistic_probability <- function(params, pred) {
+  1 / (1 + exp(- (params[1] + params[2] * pred)))
+}
+
+log_likelihood <- function(params) {
+  fn_counter <<- fn_counter + 1
+  sum(y * log(logistic_probability(params, x)) +
+        (1 - y) * log(1 - logistic_probability(params, x)))
+}
+
+grad_calc <- function(params) {
+  gr_counter <<- gr_counter + 1
+  g0 <- sum(y - logistic_probability(params, x))
+  g1 <- sum((y - logistic_probability(params, x)) * x)
+  c(g0, g1)
+}
+
+ascend_opt <- function(init_params, tol = 1e-6, init_step = 1) {
+  params <- init_params
+  diff_val <- 999
+  while (diff_val > tol) {
+    grad_val <- grad_calc(params)
+    step_size <- init_step
+    new_params <- params + step_size * grad_val
+    while (log_likelihood(new_params) < log_likelihood(params)) {
+      step_size <- step_size / 2
+      new_params <- params + step_size * grad_val
+    }
+    diff_val <- sum((new_params - params)^2)
+    params <- new_params
+  }
+  params
+}
+
+init_params <- c(0, 0)
+par_est <- ascend_opt(init_params)
+print(par_est)
+cat("Estimated coefficients:\n")
+print(par_est)
+cat("\nNumber of log-likelihood evaluations:", fn_counter, "\n")
+cat("Number of gradient evaluations:", gr_counter, "\n\n")
+
+# b
+
+fn_counter <<- 0
+gr_counter <<- 0
+
+ascend_opt_v1 <- function(init_params, tol = 1e-6, init_step = 1) {
+  params <- init_params
+  diff_val <- 999
+  while (diff_val > tol) {
+    grad_val <- grad_calc(params)
+    step_size <- init_step
+    new_params <- params + step_size * grad_val
+    while (log_likelihood(new_params) < log_likelihood(params)) {
+      step_size <- step_size / 2
+      new_params <- params + step_size * grad_val
+    }
+    diff_val <- sum((new_params - params)^2)
+    params <- new_params
+  }
+  params
+}
+
+init_params <- c(-0.2, 1)
+par_est_v1 <- ascend_opt_v1(init_params)
+fn_counter_v1 <- fn_counter
+gr_counter_v1 <- gr_counter
+
+fn_counter <<- 0
+gr_counter <<- 0
+
+ascend_opt_v2 <- function(init_params, tol = 1e-6, init_step = 1) {
+  params <- init_params
+  diff_val <- 999
+  while (diff_val > tol) {
+    grad_val <- grad_calc(params)
+    step_size <- init_step
+    new_params <- params + step_size * grad_val
+    while (log_likelihood(new_params) < log_likelihood(params)) {
+      step_size <- step_size * 0.8
+      new_params <- params + step_size * grad_val
+    }
+    diff_val <- sum((new_params - params)^2)
+    params <- new_params
+  }
+  params
+}
+
+par_est_v2 <- ascend_opt_v2(init_params)
+fn_counter_v2 <- fn_counter
+gr_counter_v2 <- gr_counter
+
+cat("Variant 1 (alpha halved):\n")
+print(par_est_v1)
+cat("Function evaluations:", fn_counter_v1, "\n")
+cat("Gradient evaluations:", gr_counter_v1, "\n\n")
+
+cat("Variant 2 (alpha reduced by 20%):\n")
+print(par_est_v2)
+cat("Function evaluations:", fn_counter_v2, "\n")
+cat("Gradient evaluations:", gr_counter_v2, "\n")
+
+# c
+
+logistic_probability <- function(params, pred) {
+  1 / (1 + exp(- (params[1] + params[2] * pred)))
+}
+
+log_likelihood <- function(params) {
+  sum(y * log(logistic_probability(params, x)) +
+        (1 - y) * log(1 - logistic_probability(params, x)))
+}
+
+grad_calc <- function(params) {
+  g0 <- sum(y - logistic_probability(params, x))
+  g1 <- sum((y - logistic_probability(params, x)) * x)
+  c(g0, g1)
+}
+
+init_params <- c(-0.2, 1)
+
+opt_bfgs <- optim(
+  par = init_params,
+  fn = function(params) -log_likelihood(params),
+  gr = function(params) -grad_calc(params),
+  method = "BFGS",
+  control = list(reltol = 1e-6),
+  hessian = TRUE
+)
+
+cat("Results from optim with BFGS:\n")
+print(opt_bfgs)
+cat("\n")
+
+opt_nm <- optim(
+  par = init_params,
+  fn = function(params) -log_likelihood(params),
+  method = "Nelder-Mead",
+  control = list(reltol = 1e-6)
+)
+
+cat("Results from optim with Nelder-Mead:\n")
+print(opt_nm)
+
+
+
+cat("BFGS estimates:", opt_bfgs$par, "\n")
+cat("Nelder-Mead estimates:", opt_nm$par, "\n")
+
+# d
+
+df_data <- data.frame(x = x, y = y)
+
+glm_fit <- glm(y ~ x, family = binomial, data = df_data)
+
+summary(glm_fit)
+
+glm_coef <- coef(glm_fit)
+cat("Coefficients from glm:\n")
+print(glm_coef)
+
+
+cat("BFGS estimates:", opt_bfgs$par, "\n")
+cat("glm estimates:  ", glm_coef, "\n")
+
 ```
