@@ -22,9 +22,12 @@ Cui Qingxuan: Responsible for the question 2.
 
 # Question 2
 
-## Generate a Random Vector using the Box-Muller Method
+## Generate a Random Vector using the 2 Methods
 
-**Measure the time for generating 10 000 000:**
+### Box-Muller Method
+
+**Measure the time for generating 10 000 000 numbers:**
+
 ```{r, echo=FALSE}
 normRVgen = function(n, mu, sigma){
   # create 2 rv vector uniformly distribute
@@ -45,7 +48,7 @@ normRVgen = function(n, mu, sigma){
   return (Z)
 }
 
-n =  1000
+n =  10000000
 mu = c(0,0)
 sigma = matrix(c(0.6,0,0,0.6), nrow=2)
 start = proc.time()
@@ -53,9 +56,12 @@ rv = normRVgen(n,mu,sigma)
 end = proc.time()
 print(end - start)
 ```
-## Generate a Random Vector using the Package mvtnorm
+### Package mvtnorm
+**The reason I use it:**
 
-**Measure the time for generating 10 000 000:**
+For generating correlated multivariate normal vectors at scale, mvtnorm provides a streamlined, efficient, and statistically rigorous solution. It eliminates manual matrix operations, ensures correctness, and scales effortlessly to large datasets—making it the optimal choice for this task.
+
+**Measure the time for generating 10 000 000 numbers:**
 
 ```{r, warning=FALSE, echo=FALSE}
 library(mvtnorm)
@@ -63,8 +69,11 @@ start = proc.time()
 rv_buildin <- rmvnorm(n, mean = mu, sigma = sigma)
 end = proc.time()
 print(end-start)
-
 ```
+
+### Compare the Time of 2 Methods
+
+Box-Muller method takes roughly 50% more time than mvnorm package to generate a random variable.
 
 ## Generate the Random Vectors from 2 Distributions
 
@@ -83,15 +92,21 @@ rv_shuffled = rv_mix[sample(nrow(rv_mix)), ]
 colnames(rv_shuffled) = c("x1", "x2")
 
 ```
-**Plot using 1000 Samples**
 
-```{r, echo=FALSE}
-# Plot the Function
-library(MASS)
-z <- kde2d(rv_shuffled$x1, rv_shuffled$x2, n = 50)
-contour(z, xlab = "x1", ylab = "x2", main = "Binary Normal Distribution Contour Map")
-points(rv_shuffled$x1, rv_shuffled$x2, col = rgb(0, 0, 1, 0.5), pch = 19,cex = 0.3)
+### Plot the Random Variables
+
+```{r, echo=FALSE, out.width="90%", echo=FALSE}
+knitr::include_graphics("Plot/q2.png")
+
 ```
+
+### Discussion
+
+It looks satisfactory.
+
+Based on the contour map, we can see the contour lines in the graph are inclined ellipses, and the interval between contour lines becomes progressively wider as the height increases, and is symmetrical about the mean point (the blue point), which in summary is consistent with the properties of a Bivariate Normal Distribution image.
+
+
 
 # Appendix
 ```{r, eval=FALSE}
@@ -158,6 +173,6 @@ colnames(rv_shuffled) = c("x1", "x2")
 library(MASS)
 z <- kde2d(rv_shuffled$x1, rv_shuffled$x2, n = 50)
 contour(z, xlab = "x1", ylab = "x2", main = "Binary Normal Distribution Contour Map")
-points(rv_shuffled$x1, rv_shuffled$x2, col = rgb(0, 0, 1, 0.5), pch = 19,cex = 0.3)
+# points(rv_shuffled$x1, rv_shuffled$x2, col = rgb(0, 0, 1, 0.5), pch = 19,cex = 0.3)
 ```
 
