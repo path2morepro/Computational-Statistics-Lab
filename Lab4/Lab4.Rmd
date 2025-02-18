@@ -77,7 +77,7 @@ MH_chi = function(x0, n){
 
 # Question 1
 
-## Generate 1000 Samples Using Metropolis-Hastings algorithm
+## Generate 1000 Samples Using Metropolis-Hastings Algorithm
 
 The Probability Density Function:
 
@@ -155,7 +155,7 @@ The standard deviation is very small (0.1), meaning that each proposed new state
 
 $\chi^2_{\lfloor x_t + 1 \rfloor}$:
 
-The chi-square distribution is asymmetric and its shape depends on the degrees of freedom. The implement would be more complicated and the acceptance rate of 60.24 percent is still high, indicating a low match between the proposal distribution and the target distribution.
+The chi-square distribution is asymmetric and its shape depends on the degrees of freedom. The implement would be more complicated and the acceptance rate of 60.49 percent is still high, indicating a low match between the proposal distribution and the target distribution.
 
 $\mathcal{N}(x_t, 5.8)$:
 
