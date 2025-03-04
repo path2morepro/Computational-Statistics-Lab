@@ -59,6 +59,597 @@ fullset <- 1:nclients
 ```
 # Question 1
 
+## a) Extending the EM Algorithm for a Three-Component Normal Mixture Model
+
+```{r, eval=FALSE}
+
+library(ggplot2)  
+
+emalg_a <- function(dat, eps=1e-8){
+  n      <- length(dat)
+  gamma  <- matrix(NA, n, 3)          
+  
+
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps){
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n){
+      pi1 <- p1 * dnorm(dat[j], mean=mu1, sd=sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean=mu2, sd=sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean=mu3, sd=sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[,1])
+    p2 <- mean(gamma[,2])
+    p3 <- mean(gamma[,3])
+    
+    mu1 <- sum(gamma[,1] * dat) / sum(gamma[,1])
+    mu2 <- sum(gamma[,2] * dat) / sum(gamma[,2])
+    mu3 <- sum(gamma[,3] * dat) / sum(gamma[,3])
+    
+    sigma1 <- sqrt(sum(gamma[,1] * (dat - mu1)^2) / sum(gamma[,1]))
+    sigma2 <- sqrt(sum(gamma[,2] * (dat - mu2)^2) / sum(gamma[,2]))
+    sigma3 <- sqrt(sum(gamma[,3] * (dat - mu3)^2) / sum(gamma[,3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- sum((pv - pv1)^2)  # Check convergence
+  }
+  
+  return(pv)
+}
+
+set.seed(12345)
+data <- c(rnorm(100, mean=-2, sd=0.8), 
+          rnorm(100, mean=2, sd=1), 
+          rnorm(100, mean=6, sd=1.2))
+
+# Run the EM algorithm
+result <- emalg_a(data)
+p1_hat <- result[1]
+p2_hat <- result[2]
+p3_hat <- result[3]
+mu1_hat <- result[4]
+mu2_hat <- result[5]
+mu3_hat <- result[6]
+sigma1_hat <- result[7]
+sigma2_hat <- result[8]
+sigma3_hat <- result[9]
+
+
+cat("Estimated Parameters:\n")
+cat(sprintf("p1 = %.3f, p2 = %.3f, p3 = %.3f\n", p1_hat, p2_hat, p3_hat))
+cat(sprintf("mu1 = %.3f, mu2 = %.3f, mu3 = %.3f\n", mu1_hat, mu2_hat, mu3_hat))
+cat(sprintf("sigma1 = %.3f, sigma2 = %.3f, sigma3 = %.3f\n", sigma1_hat, sigma2_hat, sigma3_hat))
+
+
+ggplot(data.frame(x=data), aes(x)) + 
+  geom_histogram(aes(y=..density..), bins=30, fill="lightblue", color="black", alpha=0.6) +
+  
+  # Add estimated normal distributions with proper scaling
+  stat_function(fun = function(x) p1_hat * dnorm(x, mean = mu1_hat, sd = sigma1_hat), 
+                color = "red", lwd = 1.2, linetype="dashed") +
+  stat_function(fun = function(x) p2_hat * dnorm(x, mean = mu2_hat, sd = sigma2_hat), 
+                color = "blue", lwd = 1.2, linetype="dashed") +
+  stat_function(fun = function(x) p3_hat * dnorm(x, mean = mu3_hat, sd = sigma3_hat), 
+                color = "green", lwd = 1.2, linetype="dashed") +
+  
+  ggtitle("Histogram with Fitted 3-Component Gaussian Mixture Model") +
+  xlab("Data Values") + 
+  ylab("Density") +
+  theme_minimal()
+```
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="95%"}
+
+library(ggplot2)  
+
+emalg_a <- function(dat, eps=1e-8){
+  n      <- length(dat)
+  gamma  <- matrix(NA, n, 3)          
+  
+
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps){
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n){
+      pi1 <- p1 * dnorm(dat[j], mean=mu1, sd=sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean=mu2, sd=sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean=mu3, sd=sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[,1])
+    p2 <- mean(gamma[,2])
+    p3 <- mean(gamma[,3])
+    
+    mu1 <- sum(gamma[,1] * dat) / sum(gamma[,1])
+    mu2 <- sum(gamma[,2] * dat) / sum(gamma[,2])
+    mu3 <- sum(gamma[,3] * dat) / sum(gamma[,3])
+    
+    sigma1 <- sqrt(sum(gamma[,1] * (dat - mu1)^2) / sum(gamma[,1]))
+    sigma2 <- sqrt(sum(gamma[,2] * (dat - mu2)^2) / sum(gamma[,2]))
+    sigma3 <- sqrt(sum(gamma[,3] * (dat - mu3)^2) / sum(gamma[,3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- sum((pv - pv1)^2)  # Check convergence
+  }
+  
+  return(pv)
+}
+
+set.seed(12345)
+data <- c(rnorm(100, mean=-2, sd=0.8), 
+          rnorm(100, mean=2, sd=1), 
+          rnorm(100, mean=6, sd=1.2))
+
+# Run the EM algorithm
+result <- emalg_a(data)
+p1_hat <- result[1]
+p2_hat <- result[2]
+p3_hat <- result[3]
+mu1_hat <- result[4]
+mu2_hat <- result[5]
+mu3_hat <- result[6]
+sigma1_hat <- result[7]
+sigma2_hat <- result[8]
+sigma3_hat <- result[9]
+
+
+cat("Estimated Parameters:\n")
+cat(sprintf("p1 = %.3f, p2 = %.3f, p3 = %.3f\n", p1_hat, p2_hat, p3_hat))
+cat(sprintf("mu1 = %.3f, mu2 = %.3f, mu3 = %.3f\n", mu1_hat, mu2_hat, mu3_hat))
+cat(sprintf("sigma1 = %.3f, sigma2 = %.3f, sigma3 = %.3f\n", sigma1_hat, sigma2_hat, sigma3_hat))
+
+
+ggplot(data.frame(x=data), aes(x)) + 
+  geom_histogram(aes(y=..density..), bins=30, fill="lightblue", color="black", alpha=0.6) +
+  
+  # Add estimated normal distributions with proper scaling
+  stat_function(fun = function(x) p1_hat * dnorm(x, mean = mu1_hat, sd = sigma1_hat), 
+                color = "red", lwd = 1.2, linetype="dashed") +
+  stat_function(fun = function(x) p2_hat * dnorm(x, mean = mu2_hat, sd = sigma2_hat), 
+                color = "blue", lwd = 1.2, linetype="dashed") +
+  stat_function(fun = function(x) p3_hat * dnorm(x, mean = mu3_hat, sd = sigma3_hat), 
+                color = "green", lwd = 1.2, linetype="dashed") +
+  
+  ggtitle("Histogram with Fitted 3-Component Gaussian Mixture Model") +
+  xlab("Data Values") + 
+  ylab("Density") +
+  theme_minimal()
+
+```
+
+
+## b) Modification of Stopping Criterion
+
+
+To make the stopping criterion is invariant to data scaling, I replaced the **sum of squared differences** between parameter vectors with the **maximum relative change**. Specifically, I computed the relative difference for each parameter as `abs((pv - pv1) / pv1)` and used the maximum value as the convergence criterion
+
+This makes the algorithm stops based on relative changes in parameters, making it independent of data scaling.
+
+
+
+
+## c) Fitted Mixture Models
+
+### Fitted Mixture Model (Part a)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="95%"}
+emalg_b <- function(dat, eps=1e-8){
+  n      <- length(dat)
+  gamma  <- matrix(NA, n, 3)
+  
+  
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps){
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n){
+      pi1 <- p1 * dnorm(dat[j], mean=mu1, sd=sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean=mu2, sd=sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean=mu3, sd=sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+      
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[,1])
+    p2 <- mean(gamma[,2])
+    p3 <- mean(gamma[,3])
+    
+    mu1 <- sum(gamma[,1] * dat) / sum(gamma[,1])
+    mu2 <- sum(gamma[,2] * dat) / sum(gamma[,2])
+    mu3 <- sum(gamma[,3] * dat) / sum(gamma[,3])
+    
+    sigma1 <- sqrt(sum(gamma[,1] * (dat - mu1)^2) / sum(gamma[,1]))
+    sigma2 <- sqrt(sum(gamma[,2] * (dat - mu2)^2) / sum(gamma[,2]))
+    sigma3 <- sqrt(sum(gamma[,3] * (dat - mu3)^2) / sum(gamma[,3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- max(abs((pv - pv1) / pv1))  # Relative change
+  }
+  e = gamma
+  return(pv)
+}
+
+load("threepops.Rdata")
+data <- dat3p
+
+estimates_a <- emalg_a(data)
+estimates_b <- emalg_b(data)
+
+
+# Extract parameter estimates from part a
+p1_a <- estimates_a[1]
+p2_a <- estimates_a[2]
+p3_a <- estimates_a[3]
+mu1_a <- estimates_a[4]
+mu2_a <- estimates_a[5]
+mu3_a <- estimates_a[6]
+sigma1_a <- estimates_a[7]
+sigma2_a <- estimates_a[8]
+sigma3_a <- estimates_a[9]
+
+# Extract parameter estimates from part b
+p1_b <- estimates_b[1]
+p2_b <- estimates_b[2]
+p3_b <- estimates_b[3]
+mu1_b <- estimates_b[4]
+mu2_b <- estimates_b[5]
+mu3_b <- estimates_b[6]
+sigma1_b <- estimates_b[7]
+sigma2_b <- estimates_b[8]
+sigma3_b <- estimates_b[9]
+
+
+
+# Plot histogram with fitted lines for part a
+hist(data, breaks = 30, col = "lightblue", probability = TRUE, 
+     main = "Histogram of dat3p with Fitted Mixture Model (Part a)", 
+     xlab = "Value", ylim = c(0, 0.5))  # Adjust ylim as needed
+
+# Define the range for the fitted density curve
+x_range <- seq(min(data), max(data), length.out = 1000)
+
+# Compute the fitted density of the mixture model for part a
+fitted_density_a <- p1_a * dnorm(x_range, mean = mu1_a, sd = sigma1_a) +
+  p2_a * dnorm(x_range, mean = mu2_a, sd = sigma2_a) +
+  p3_a * dnorm(x_range, mean = mu3_a, sd = sigma3_a)
+
+# Overlay the fitted density curve for part a
+lines(x_range, fitted_density_a, col = "red", lwd = 2)
+
+
+
+```
+
+
+### Fitted Mixture Model (Part b)
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="95%"}
+emalg_b <- function(dat, eps=1e-8){
+  n      <- length(dat)
+  gamma  <- matrix(NA, n, 3)
+  
+  
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps){
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n){
+      pi1 <- p1 * dnorm(dat[j], mean=mu1, sd=sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean=mu2, sd=sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean=mu3, sd=sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+      
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[,1])
+    p2 <- mean(gamma[,2])
+    p3 <- mean(gamma[,3])
+    
+    mu1 <- sum(gamma[,1] * dat) / sum(gamma[,1])
+    mu2 <- sum(gamma[,2] * dat) / sum(gamma[,2])
+    mu3 <- sum(gamma[,3] * dat) / sum(gamma[,3])
+    
+    sigma1 <- sqrt(sum(gamma[,1] * (dat - mu1)^2) / sum(gamma[,1]))
+    sigma2 <- sqrt(sum(gamma[,2] * (dat - mu2)^2) / sum(gamma[,2]))
+    sigma3 <- sqrt(sum(gamma[,3] * (dat - mu3)^2) / sum(gamma[,3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- max(abs((pv - pv1) / pv1))  # Relative change
+  }
+  e = gamma
+  return(pv)
+}
+
+load("threepops.Rdata")
+data <- dat3p
+
+estimates_a <- emalg_a(data)
+estimates_b <- emalg_b(data)
+
+
+# Extract parameter estimates from part a
+p1_a <- estimates_a[1]
+p2_a <- estimates_a[2]
+p3_a <- estimates_a[3]
+mu1_a <- estimates_a[4]
+mu2_a <- estimates_a[5]
+mu3_a <- estimates_a[6]
+sigma1_a <- estimates_a[7]
+sigma2_a <- estimates_a[8]
+sigma3_a <- estimates_a[9]
+
+# Extract parameter estimates from part b
+p1_b <- estimates_b[1]
+p2_b <- estimates_b[2]
+p3_b <- estimates_b[3]
+mu1_b <- estimates_b[4]
+mu2_b <- estimates_b[5]
+mu3_b <- estimates_b[6]
+sigma1_b <- estimates_b[7]
+sigma2_b <- estimates_b[8]
+sigma3_b <- estimates_b[9]
+
+
+
+# Plot histogram with fitted lines for part b
+hist(data, breaks = 30, col = "lightblue", probability = TRUE, 
+     main = "Histogram of dat3p with Fitted Mixture Model (Part b)", 
+     xlab = "Value", ylim = c(0, 0.5))  # Adjust ylim as needed
+
+# Compute the fitted density of the mixture model for part b
+fitted_density_b <- p1_b * dnorm(x_range, mean = mu1_b, sd = sigma1_b) +
+  p2_b * dnorm(x_range, mean = mu2_b, sd = sigma2_b) +
+  p3_b * dnorm(x_range, mean = mu3_b, sd = sigma3_b)
+
+# Overlay the fitted density curve for part b
+lines(x_range, fitted_density_b, col = "blue", lwd = 2)
+```
+
+For both versions (Part a and Part b), I obtained similar graphs. The histograms of the `dat3p` data were overlaid with the fitted density curves from the three-component normal mixture model. The fitted curves matched the data distribution well, showing that the EM algorithm worked effectively in estimating the parameters for both versions.
+
+### Estimated Model Parameters
+
+#### With part a stopping criteria :
+
+- **Mixing Proportions**:
+
+  - `p1 = 0.227`
+  - `p2 = 0.248`
+  - `p3 = 0.525`
+  
+- **Means**:
+
+  - `mu1 = 1.074`
+  - `mu2 = 3.832`
+  - `mu3 = 6.582`
+  
+- **Standard Deviations**:
+
+  - `sigma1 = 1.199`
+  - `sigma2 = 0.717`
+  - `sigma3 = 0.601`
+
+#### With part b stopping criteria :
+
+- **Mixing Proportions**:
+  - `p1 = 0.227`
+  - `p2 = 0.248`
+  - `p3 = 0.525`
+  
+- **Means**:
+  - `mu1 = 1.073`
+  - `mu2 = 3.832`
+  - `mu3 = 6.582`
+  
+- **Standard Deviations**:
+  - `sigma1 = 1.198`
+  - `sigma2 = 0.717`
+  - `sigma3 = 0.601`
+
+
+
+
+## d) Convergence of Parameter Estimates Over Iterations
+
+```{r, echo=FALSE, message=FALSE, warning=FALSE, out.width="95%"}
+emalg_track <- function(dat, eps = 1e-8) {
+  n <- length(dat)
+  gamma <- matrix(NA, n, 3)
+  
+  # Initialize parameters
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sigma2 <- sigma3 <- sd(dat) * 2/3
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  # Initialize storage for parameter estimates at each iteration
+  param_history <- list(
+    p1 = numeric(),
+    p2 = numeric(),
+    p3 = numeric(),
+    mu1 = numeric(),
+    mu2 = numeric(),
+    mu3 = numeric(),
+    sigma1 = numeric(),
+    sigma2 = numeric(),
+    sigma3 = numeric()
+  )
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  iter <- 0  # Initialize iteration counter
+  
+  while (cc > eps) {
+    iter <- iter + 1
+    pv1 <- pv 
+    
+    ### E step ###
+    for (j in 1:n) {
+      pi1 <- p1 * dnorm(dat[j], mean = mu1, sd = sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean = mu2, sd = sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean = mu3, sd = sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[, 1])
+    p2 <- mean(gamma[, 2])
+    p3 <- mean(gamma[, 3])
+    
+    mu1 <- sum(gamma[, 1] * dat) / sum(gamma[, 1])
+    mu2 <- sum(gamma[, 2] * dat) / sum(gamma[, 2])
+    mu3 <- sum(gamma[, 3] * dat) / sum(gamma[, 3])
+    
+    sigma1 <- sqrt(sum(gamma[, 1] * (dat - mu1)^2) / sum(gamma[, 1]))
+    sigma2 <- sqrt(sum(gamma[, 2] * (dat - mu2)^2) / sum(gamma[, 2]))
+    sigma3 <- sqrt(sum(gamma[, 3] * (dat - mu3)^2) / sum(gamma[, 3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    
+    # Store parameter estimates for this iteration
+    param_history$p1[iter] <- p1
+    param_history$p2[iter] <- p2
+    param_history$p3[iter] <- p3
+    param_history$mu1[iter] <- mu1
+    param_history$mu2[iter] <- mu2
+    param_history$mu3[iter] <- mu3
+    param_history$sigma1[iter] <- sigma1
+    param_history$sigma2[iter] <- sigma2
+    param_history$sigma3[iter] <- sigma3
+    
+    cc <- max(abs((pv - pv1) / pv1))  
+  }
+  
+  return(param_history)
+}
+
+
+
+param_history <- emalg_track(data)
+
+
+# Plot p1 convergence
+plot(param_history$p1, type = "l", xlab = "Iteration", ylab = "p1", 
+     main = "p1 Convergence", ylim = range(param_history$p1), xlim = c(1, length(param_history$p1)))
+
+# Plot p2 convergence
+plot(param_history$p2, type = "l", xlab = "Iteration", ylab = "p2", 
+     main = "p2 Convergence", ylim = range(param_history$p2), xlim = c(1, length(param_history$p2)))
+
+# Plot p3 convergence
+plot(param_history$p3, type = "l", xlab = "Iteration", ylab = "p3", 
+     main = "p3 Convergence", ylim = range(param_history$p3), xlim = c(1, length(param_history$p3)))
+
+# Plot mu1 convergence
+plot(param_history$mu1, type = "l", xlab = "Iteration", ylab = "mu1", 
+     main = "mu1 Convergence", ylim = range(param_history$mu1), xlim = c(1, length(param_history$mu1)))
+
+# Plot mu2 convergence
+plot(param_history$mu2, type = "l", xlab = "Iteration", ylab = "mu2", 
+     main = "mu2 Convergence", ylim = range(param_history$mu2), xlim = c(1, length(param_history$mu2)))
+
+# Plot mu3 convergence
+plot(param_history$mu3, type = "l", xlab = "Iteration", ylab = "mu3", 
+     main = "mu3 Convergence", ylim = range(param_history$mu3), xlim = c(1, length(param_history$mu3)))
+
+# Plot sigma1 convergence
+plot(param_history$sigma1, type = "l", xlab = "Iteration", ylab = "sigma1", 
+     main = "sigma1 Convergence", ylim = range(param_history$sigma1), xlim = c(1, length(param_history$sigma1)))
+
+# Plot sigma2 convergence
+plot(param_history$sigma2, type = "l", xlab = "Iteration", ylab = "sigma2", 
+     main = "sigma2 Convergence", ylim = range(param_history$sigma2), xlim = c(1, length(param_history$sigma2)))
+
+# Plot sigma3 convergence
+plot(param_history$sigma3, type = "l", xlab = "Iteration", ylab = "sigma3", 
+     main = "sigma3 Convergence", ylim = range(param_history$sigma3), xlim = c(1, length(param_history$sigma3)))
+
+
+```
+
+1. **Mixing Proportions**:
+   - `p1` stabilizes around **0.23** after approximately 100 iterations.
+   - `p2` stabilizes around **0.25** after approximately 100 iterations.
+   - `p3` stabilizes around **0.53** after approximately 40 iterations.
+
+2. **Means**:
+   - `mu1` stabilizes around **1.1** after approximately 100 iterations.
+   - `mu2` stabilizes around **3.85** after approximately 100 iterations.
+   - `mu3` stabilizes around **6.555** after approximately 40 iterations.
+
+3. **Standard Deviations**:
+   - `sigma1` stabilizes around **1.2** after approximately 100 iterations.
+   - `sigma2` stabilizes around **0.7** after approximately 100 iterations.
+   - `sigma3` stabilizes around **0.6** after approximately 25 iterations.
+
+
+
+
 
 # Question 2
 
@@ -117,6 +708,311 @@ grid.arrange(grobs = images, ncol = 2, top = "Optimization Curves & Distribution
 
 
 # Appendix
+
+
+## Question 1
+
+```{r, eval=FALSE}
+# Part a
+
+library(ggplot2)
+
+
+emalg_a <- function(dat, eps = 1e-8) {
+  n <- length(dat)
+  gamma <- matrix(NA, n, 3)
+  
+  # Initialize parameters
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps) {
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n) {
+      pi1 <- p1 * dnorm(dat[j], mean = mu1, sd = sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean = mu2, sd = sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean = mu3, sd = sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[, 1])
+    p2 <- mean(gamma[, 2])
+    p3 <- mean(gamma[, 3])
+    
+    mu1 <- sum(gamma[, 1] * dat) / sum(gamma[, 1])
+    mu2 <- sum(gamma[, 2] * dat) / sum(gamma[, 2])
+    mu3 <- sum(gamma[, 3] * dat) / sum(gamma[, 3])
+    
+    sigma1 <- sqrt(sum(gamma[, 1] * (dat - mu1)^2) / sum(gamma[, 1]))
+    sigma2 <- sqrt(sum(gamma[, 2] * (dat - mu2)^2) / sum(gamma[, 2]))
+    sigma3 <- sqrt(sum(gamma[, 3] * (dat - mu3)^2) / sum(gamma[, 3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- sum((pv - pv1)^2)  # Check convergence
+  }
+  
+  return(pv)
+}
+
+# Generate synthetic data
+set.seed(12345)
+data <- c(rnorm(100, mean = -2, sd = 0.8), 
+          rnorm(100, mean = 2, sd = 1), 
+          rnorm(100, mean = 6, sd = 1.2))
+
+# Run the EM algorithm
+result <- emalg_a(data)
+p1_hat <- result[1]
+p2_hat <- result[2]
+p3_hat <- result[3]
+mu1_hat <- result[4]
+mu2_hat <- result[5]
+mu3_hat <- result[6]
+sigma1_hat <- result[7]
+sigma2_hat <- result[8]
+sigma3_hat <- result[9]
+
+# Print estimated parameters
+cat("Estimated Parameters:\n")
+cat(sprintf("p1 = %.3f, p2 = %.3f, p3 = %.3f\n", p1_hat, p2_hat, p3_hat))
+cat(sprintf("mu1 = %.3f, mu2 = %.3f, mu3 = %.3f\n", mu1_hat, mu2_hat, mu3_hat))
+cat(sprintf("sigma1 = %.3f, sigma2 = %.3f, sigma3 = %.3f\n", sigma1_hat, sigma2_hat, sigma3_hat))
+
+# Plot histogram with fitted mixture model
+ggplot(data.frame(x = data), aes(x)) + 
+  geom_histogram(aes(y = ..density..), bins = 30, fill = "lightblue", color = "black", alpha = 0.6) +
+  stat_function(fun = function(x) p1_hat * dnorm(x, mean = mu1_hat, sd = sigma1_hat), 
+                color = "red", lwd = 1.2, linetype = "dashed") +
+  stat_function(fun = function(x) p2_hat * dnorm(x, mean = mu2_hat, sd = sigma2_hat), 
+                color = "blue", lwd = 1.2, linetype = "dashed") +
+  stat_function(fun = function(x) p3_hat * dnorm(x, mean = mu3_hat, sd = sigma3_hat), 
+                color = "green", lwd = 1.2, linetype = "dashed") +
+  ggtitle("Histogram with Fitted 3-Component Gaussian Mixture Model") +
+  xlab("Data Values") + 
+  ylab("Density") +
+  theme_minimal()
+
+# part b
+
+# EM Algorithm with Modified Stopping Criterion
+emalg_b <- function(dat, eps = 1e-8) {
+  n <- length(dat)
+  gamma <- matrix(NA, n, 3)
+  
+  # Initialize parameters
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sd(dat) * 2/3
+  sigma2 <- sigma1
+  sigma3 <- sigma1
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  while (cc > eps) {
+    pv1 <- pv  # Save previous parameter vector
+    
+    ### E step ###
+    for (j in 1:n) {
+      pi1 <- p1 * dnorm(dat[j], mean = mu1, sd = sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean = mu2, sd = sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean = mu3, sd = sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[, 1])
+    p2 <- mean(gamma[, 2])
+    p3 <- mean(gamma[, 3])
+    
+    mu1 <- sum(gamma[, 1] * dat) / sum(gamma[, 1])
+    mu2 <- sum(gamma[, 2] * dat) / sum(gamma[, 2])
+    mu3 <- sum(gamma[, 3] * dat) / sum(gamma[, 3])
+    
+    sigma1 <- sqrt(sum(gamma[, 1] * (dat - mu1)^2) / sum(gamma[, 1]))
+    sigma2 <- sqrt(sum(gamma[, 2] * (dat - mu2)^2) / sum(gamma[, 2]))
+    sigma3 <- sqrt(sum(gamma[, 3] * (dat - mu3)^2) / sum(gamma[, 3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    cc <- max(abs((pv - pv1) / pv1))  # Relative change
+  }
+  
+  return(pv)
+}
+
+
+# Part c
+
+# Load data
+load("threepops.Rdata")
+data <- dat3p
+
+# Run the EM algorithm (Part a)
+estimates_a <- emalg_a(data)
+
+# Run the EM algorithm (Part b)
+estimates_b <- emalg_b(data)
+
+# Plot histogram with fitted mixture model (Part a)
+hist(data, breaks = 30, col = "lightblue", probability = TRUE, 
+     main = "Histogram of dat3p with Fitted Mixture Model (Part a)", 
+     xlab = "Value", ylim = c(0, 0.5))
+
+# Define the range for the fitted density curve
+x_range <- seq(min(data), max(data), length.out = 1000)
+
+# Compute the fitted density of the mixture model for part a
+fitted_density_a <- estimates_a[1] * dnorm(x_range, mean = estimates_a[4], sd = estimates_a[7]) +
+  estimates_a[2] * dnorm(x_range, mean = estimates_a[5], sd = estimates_a[8]) +
+  estimates_a[3] * dnorm(x_range, mean = estimates_a[6], sd = estimates_a[9])
+
+# Overlay the fitted density curve for part a
+lines(x_range, fitted_density_a, col = "red", lwd = 2)
+
+# Plot histogram with fitted mixture model (Part b)
+hist(data, breaks = 30, col = "lightblue", probability = TRUE, 
+     main = "Histogram of dat3p with Fitted Mixture Model (Part b)", 
+     xlab = "Value", ylim = c(0, 0.5))
+
+# Compute the fitted density of the mixture model for part b
+fitted_density_b <- estimates_b[1] * dnorm(x_range, mean = estimates_b[4], sd = estimates_b[7]) +
+  estimates_b[2] * dnorm(x_range, mean = estimates_b[5], sd = estimates_b[8]) +
+  estimates_b[3] * dnorm(x_range, mean = estimates_b[6], sd = estimates_b[9])
+
+# Overlay the fitted density curve for part b
+lines(x_range, fitted_density_b, col = "blue", lwd = 2)
+
+
+# Part d
+
+# EM Algorithm with Parameter Tracking
+emalg_track <- function(dat, eps = 1e-8) {
+  n <- length(dat)
+  gamma <- matrix(NA, n, 3)
+  
+  # Initialize parameters
+  p1 <- p2 <- p3 <- 1/3
+  sigma1 <- sigma2 <- sigma3 <- sd(dat) * 2/3
+  mu1 <- mean(dat) - sigma1
+  mu2 <- mean(dat)
+  mu3 <- mean(dat) + sigma1
+  pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+  
+  # Initialize storage for parameter estimates at each iteration
+  param_history <- list(
+    p1 = numeric(),
+    p2 = numeric(),
+    p3 = numeric(),
+    mu1 = numeric(),
+    mu2 = numeric(),
+    mu3 = numeric(),
+    sigma1 = numeric(),
+    sigma2 = numeric(),
+    sigma3 = numeric()
+  )
+  
+  cc <- eps + 100  # Initialize convergence criterion
+  iter <- 0  # Initialize iteration counter
+  
+  while (cc > eps) {
+    iter <- iter + 1
+    pv1 <- pv 
+    
+    ### E step ###
+    for (j in 1:n) {
+      pi1 <- p1 * dnorm(dat[j], mean = mu1, sd = sigma1)
+      pi2 <- p2 * dnorm(dat[j], mean = mu2, sd = sigma2)
+      pi3 <- p3 * dnorm(dat[j], mean = mu3, sd = sigma3)
+      total <- pi1 + pi2 + pi3
+      gamma[j, 1] <- pi1 / total
+      gamma[j, 2] <- pi2 / total
+      gamma[j, 3] <- pi3 / total
+    }
+    
+    ### M step ###
+    p1 <- mean(gamma[, 1])
+    p2 <- mean(gamma[, 2])
+    p3 <- mean(gamma[, 3])
+    
+    mu1 <- sum(gamma[, 1] * dat) / sum(gamma[, 1])
+    mu2 <- sum(gamma[, 2] * dat) / sum(gamma[, 2])
+    mu3 <- sum(gamma[, 3] * dat) / sum(gamma[, 3])
+    
+    sigma1 <- sqrt(sum(gamma[, 1] * (dat - mu1)^2) / sum(gamma[, 1]))
+    sigma2 <- sqrt(sum(gamma[, 2] * (dat - mu2)^2) / sum(gamma[, 2]))
+    sigma3 <- sqrt(sum(gamma[, 3] * (dat - mu3)^2) / sum(gamma[, 3]))
+    
+    pv <- c(p1, p2, p3, mu1, mu2, mu3, sigma1, sigma2, sigma3)
+    
+    # Store parameter estimates for this iteration
+    param_history$p1[iter] <- p1
+    param_history$p2[iter] <- p2
+    param_history$p3[iter] <- p3
+    param_history$mu1[iter] <- mu1
+    param_history$mu2[iter] <- mu2
+    param_history$mu3[iter] <- mu3
+    param_history$sigma1[iter] <- sigma1
+    param_history$sigma2[iter] <- sigma2
+    param_history$sigma3[iter] <- sigma3
+    
+    cc <- max(abs((pv - pv1) / pv1))  
+  }
+  
+  return(param_history)
+}
+
+# Run the EM algorithm with parameter tracking
+param_history <- emalg_track(data)
+
+# Plot convergence of parameters (one after the other)
+plot(param_history$p1, type = "l", xlab = "Iteration", ylab = "p1", 
+     main = "p1 Convergence", ylim = range(param_history$p1), xlim = c(1, length(param_history$p1)))
+
+plot(param_history$p2, type = "l", xlab = "Iteration", ylab = "p2", 
+     main = "p2 Convergence", ylim = range(param_history$p2), xlim = c(1, length(param_history$p2)))
+
+plot(param_history$p3, type = "l", xlab = "Iteration", ylab = "p3", 
+     main = "p3 Convergence", ylim = range(param_history$p3), xlim = c(1, length(param_history$p3)))
+
+plot(param_history$mu1, type = "l", xlab = "Iteration", ylab = "mu1", 
+     main = "mu1 Convergence", ylim = range(param_history$mu1), xlim = c(1, length(param_history$mu1)))
+
+plot(param_history$mu2, type = "l", xlab = "Iteration", ylab = "mu2", 
+     main = "mu2 Convergence", ylim = range(param_history$mu2), xlim = c(1, length(param_history$mu2)))
+
+plot(param_history$mu3, type = "l", xlab = "Iteration", ylab = "mu3", 
+     main = "mu3 Convergence", ylim = range(param_history$mu3), xlim = c(1, length(param_history$mu3)))
+
+plot(param_history$sigma1, type = "l", xlab = "Iteration", ylab = "sigma1", 
+     main = "sigma1 Convergence", ylim = range(param_history$sigma1), xlim = c(1, length(param_history$sigma1)))
+
+plot(param_history$sigma2, type = "l", xlab = "Iteration", ylab = "sigma2", 
+     main = "sigma2 Convergence", ylim = range(param_history$sigma2), xlim = c(1, length(param_history$sigma2)))
+
+plot(param_history$sigma3, type = "l", xlab = "Iteration", ylab = "sigma3", 
+     main = "sigma3 Convergence", ylim = range(param_history$sigma3), xlim = c(1, length(param_history$sigma3)))
+
+
+```
+
+## Question 2 
 
 ```{r, eval=FALSE}
 ##############################################################
