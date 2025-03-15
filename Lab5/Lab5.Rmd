@@ -193,8 +193,16 @@ legend("topright", legend = c("H0: mu=0", "Ha: mu=0.5"), col = c("blue", "red"),
 
 ## Sign Test
 We selected 20 values for $\mu$ and set the number of repetitions to 10,000.
+To determine an appropriate number of repetitions, we initially tested values of 10, 100, 1,000, and 10,000. 
+However, lower repetition counts resulted in noticeable fluctuations in the power values, which should ideally exhibit a smooth and stable increase as the plot below. Since our null hypothesis states that $\mu = 0$, the power is expected to be lower when $\mu$ is closer to 0. 
+To ensure the reliability of our estimation, we considered the simulation’s precision by examining the standard error (SE) of power estimates:
 
-To determine an appropriate number of repetitions, we initially tested values of 10, 100, 1,000, and 10,000. However, lower repetition counts resulted in noticeable fluctuations in the power values, which should ideally exhibit a smooth and stable increase as the plot below. Since our null hypothesis states that $\mu = 0$, the power is expected to be lower when $\mu$ is closer to 0. Therefore, we chose 10,000 repetitions to ensure the reliability and consistency of our results.
+$$SE=\sqrt{\frac{P(1-P)}{\mathrm{reps}}}$$
+where 
+$P$ represents the estimated power. A larger number of repetitions reduces 
+$SE$, leading to more precise estimates. 
+With 10,000 repetitions, the standard error became sufficiently small, ensuring that the estimated power values were stable across repeated simulations.
+Therefore, we chose 10,000 repetitions to ensure the reliability and consistency of our results.
 ```{r, echo=FALSE, fig.width=6, fig.height=4}
 # sign test
 # non-parametric method
@@ -207,6 +215,7 @@ To determine an appropriate number of repetitions, we initially tested values of
 # set grid values
 mu = seq(from=0, to=2, length.out=20)
 power_values = sapply(mu, compute_power)
+se = sqrt((power_values*(1-power_values))/10000)
 # reps has been defined in the definition of compute power function as 1000
 plot(mu, power_values, type = "l", col = "blue", lwd = 2, 
      xlab = expression(mu), ylab = "Power", main = "Power Curve")
